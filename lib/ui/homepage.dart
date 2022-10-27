@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -29,14 +31,71 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  late FlutterTts flutterTts;
   late Timer _timer;
   int time = 0;
+  int delayInSec = 5;
   bool isTimerRunning = false;
+  String? language;
+  String? engine;
+  bool isCurrentLanguageInstalled = false;
+
+  bool get isIOS => !kIsWeb && Platform.isIOS;
+  bool get isAndroid => !kIsWeb && Platform.isAndroid;
+  bool get isWindows => !kIsWeb && Platform.isWindows;
+  bool get isWeb => kIsWeb;
+
+  @override
+  void initState() {
+    super.initState();
+    initTts();
+  }
 
   @override
   void dispose() {
     _timer.cancel();
     super.dispose();
+  }
+
+  initTts() {
+    flutterTts = FlutterTts();
+
+    _setAwaitOptions();
+
+    if (isAndroid) {
+      _getDefaultEngine();
+      _getDefaultVoice();
+    }
+    _getLanguages().then((value) => print(value));
+  }
+
+  Future<dynamic> _getLanguages() => flutterTts.getLanguages;
+
+  Future<dynamic> _getEngines() => flutterTts.getEngines;
+
+  Future _getDefaultEngine() async {
+    var engine = await flutterTts.getDefaultEngine;
+    if (engine != null) {
+      print(engine);
+    }
+  }
+
+  Future _getDefaultVoice() async {
+    var voice = await flutterTts.getDefaultVoice;
+    if (voice != null) {
+      print(voice);
+    }
+  }
+
+  Future _setAwaitOptions() async {
+    await flutterTts.awaitSpeakCompletion(true);
+  }
+
+  Future _speak(text) async {
+    await flutterTts.setVolume(1);
+    if (text != null) {
+      await flutterTts.speak(text);
+    }
   }
 
   _playSound() async {
@@ -46,11 +105,6 @@ class _MyHomePageState extends State<MyHomePage> {
     Uint8List soundbytes =
         bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes);
     await player.play(BytesSource(soundbytes));
-  }
-
-  _speak(text) async {
-    final flutterTts = FlutterTts();
-    await flutterTts.speak(text);
   }
 
   _showToast(msg) {
@@ -75,14 +129,17 @@ class _MyHomePageState extends State<MyHomePage> {
       _timer = Timer.periodic(
           const Duration(seconds: 1),
           (timer) => {
-                setState(() {
-                  time++;
-                  if (time % 10 == 0) {
-                    _speak(time.toString());
-                    return;
+                if (timer.tick > delayInSec)
+                  {
+                    setState(() {
+                      time++;
+                      if (time % 10 == 0) {
+                        _speak(time.toString());
+                        return;
+                      }
+                      _playSound();
+                    }),
                   }
-                  _playSound();
-                }),
               });
       return;
     }
