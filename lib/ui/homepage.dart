@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:countdown_app/providers/soundPlayer.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -31,6 +32,8 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  final String soundPath = "assets/audio/beep.mp3";
+  late SoundPlayer soundPlayer = SoundPlayer(soundPath);
   late FlutterTts flutterTts;
   late Timer _timer;
   int time = 0;
@@ -66,7 +69,6 @@ class _MyHomePageState extends State<MyHomePage> {
       _getDefaultEngine();
       _getDefaultVoice();
     }
-    _getLanguages().then((value) => print(value));
   }
 
   Future<dynamic> _getLanguages() => flutterTts.getLanguages;
@@ -76,14 +78,14 @@ class _MyHomePageState extends State<MyHomePage> {
   Future _getDefaultEngine() async {
     var engine = await flutterTts.getDefaultEngine;
     if (engine != null) {
-      print(engine);
+      await flutterTts.setEngine(engine);
     }
   }
 
   Future _getDefaultVoice() async {
     var voice = await flutterTts.getDefaultVoice;
     if (voice != null) {
-      print(voice);
+      await flutterTts.setLanguage(voice["locale"]);
     }
   }
 
@@ -93,18 +95,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future _speak(text) async {
     await flutterTts.setVolume(1);
+    // await flutterTts.setLanguage(language!);
     if (text != null) {
       await flutterTts.speak(text);
     }
-  }
-
-  _playSound() async {
-    final AudioPlayer player = AudioPlayer();
-    const beepAudioPath = "assets/audio/beep.mp3";
-    ByteData bytes = await rootBundle.load(beepAudioPath);
-    Uint8List soundbytes =
-        bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes);
-    await player.play(BytesSource(soundbytes));
   }
 
   _showToast(msg) {
@@ -129,7 +123,7 @@ class _MyHomePageState extends State<MyHomePage> {
       _timer = Timer.periodic(
           const Duration(seconds: 1),
           (timer) => {
-                if (timer.tick > delayInSec)
+                if (time > delayInSec || timer.tick > delayInSec)
                   {
                     setState(() {
                       time++;
@@ -137,7 +131,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         _speak(time.toString());
                         return;
                       }
-                      _playSound();
+                      soundPlayer.play();
                     }),
                   }
               });
